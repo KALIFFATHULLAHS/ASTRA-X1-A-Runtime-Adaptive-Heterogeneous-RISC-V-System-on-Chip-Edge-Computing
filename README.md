@@ -6,6 +6,10 @@
 [![Power](https://img.shields.io/badge/On--Chip_Power-302_mW-D97706?style=for-the-badge)](docs/vivado_reports/fpga_top_power_routed.rpt)
 [![Report](https://img.shields.io/badge/PDF_Report-ASTRA__X1__FINAL__PROJECT__REPORT.pdf-DC2626?style=for-the-badge)](ASTRA_X1_FINAL_PROJECT_REPORT.pdf)
 
+<p align="center">
+  <img src="docs/hardware_captures/astra_x1_system_architecture.jpg" alt="ASTRA-X1 Complete System-on-Chip Architecture" width="100%"/>
+</p>
+
 > **Full Project Title:** *Design and Implementation of a Runtime-Adaptive Heterogeneous RISC-V System-on-Chip with Floating-Point, SIMD Acceleration, and Power-Aware Execution for Edge Computing*  
 > **Target Hardware:** EDGE Artix-7 100T Development Board (`xc7a100t-2ftg256c` @ **50.00 MHz**, $F_{\max} = \mathbf{54.38\text{ MHz}}$)  
 > **Deliverables Included:** Synthesizable Verilog RTL (`ricscv.srcs/`), Multi-Language Developer SDK (`tools/`, `firmware/`, `applications/`), Interactive On-Chip OS (`scripts/astra_x1_product_os.py`), Milestone 1–8 Hardware Verification Suites (`scripts/`), Full Technical Report PDF ([ASTRA_X1_FINAL_PROJECT_REPORT.pdf](ASTRA_X1_FINAL_PROJECT_REPORT.pdf)), and IEEE LaTeX Paper ([ASTRA_X1_IEEE_PAPER.tex](ASTRA_X1_IEEE_PAPER.tex)).

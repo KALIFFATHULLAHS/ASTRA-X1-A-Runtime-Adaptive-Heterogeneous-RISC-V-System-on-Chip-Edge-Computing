@@ -25,7 +25,7 @@ Conventional homogeneous microcontrollers suffer from severe compute bottlenecks
 
 ## 2. System-on-Chip Architecture (`ASTRA-X1`)
 
-![ASTRA-X1 Complete System-on-Chip Architecture Diagram](C:/Users/skali/.gemini/antigravity/brain/5c286792-f9d5-49d3-9208-a1e454c10cff/astra_x1_system_architecture.jpg)
+![ASTRA-X1 Complete System-on-Chip Architecture Diagram](docs/hardware_captures/astra_x1_system_architecture.jpg)
 
 ```mermaid
 flowchart TB
@@ -69,7 +69,7 @@ flowchart TB
     DMA -.->|"Single-Cycle Write Snoop"| DC
     WB <--> NPU & SIMD & FPU & DMEM & PER & DAAQ
     FPU -.->|"ext_irq / timer_irq"| CORE
-```
+`
 
 ### 2.1 Global Memory Map & Wishbone B4 Address Space
 
@@ -88,7 +88,7 @@ flowchart TB
 
 ## 3. Core Research Novelty & Patentable Claims (`ASTRA-DAAQ`)
 
-Unlike standard RISC-V + accelerator integrations that only claim system integration, **ASTRA-X1** introduces three hardware-verified microarchitectural innovations implemented in [wb_astra_daaq.v](file:///d:/FINAL YEAR PROJECT/ricscv/ricscv.srcs/sources_1/new/wb_astra_daaq.v) and [astra_l1_caches.v](file:///d:/FINAL YEAR PROJECT/ricscv/ricscv.srcs/sources_1/new/astra_l1_caches.v):
+Unlike standard RISC-V + accelerator integrations that only claim system integration, **ASTRA-X1** introduces three hardware-verified microarchitectural innovations implemented in [wb_astra_daaq.v](ricscv.srcs/sources_1/new/wb_astra_daaq.v) and [astra_l1_caches.v](ricscv.srcs/sources_1/new/astra_l1_caches.v):
 
 1. **Claim 1 — Producer-Consumer Cross-Engine Dependency Matrix Inhibiting Premature Quiescence:**
    - Taps live accelerator busy and Wishbone strobe wires (`dma_busy`, `simd_busy`, `npu_busy`, `fpu_busy`, `s1_stb..s6_stb`) and clamps a downstream consumer engine's idle timer to `0` while its upstream producer is active.
@@ -105,20 +105,20 @@ Unlike standard RISC-V + accelerator integrations that only claim system integra
 
 | RTL Source File | Lines | Subsystem Role |
 | :--- | ---: | :--- |
-| [fpga_top.v](file:///d:/FINAL YEAR PROJECT/ricscv/ricscv.srcs/sources_1/new/fpga_top.v) | 220 | Top-Level FPGA I/O Ring, Clock Manager (`50 MHz`), Reset Debouncer, UART Loader & Pin Routing |
-| [riscv_core_top.v](file:///d:/FINAL YEAR PROJECT/ricscv/ricscv.srcs/sources_1/new/riscv_core_top.v) | 864 | 7-Stage RV32IMFX Pipeline + Wishbone B4 Interconnect + All 7 Slaves & Interrupt Wiring |
-| [astra_l1_caches.v](file:///d:/FINAL YEAR PROJECT/ricscv/ricscv.srcs/sources_1/new/astra_l1_caches.v) | 185 | 64-Line Direct-Mapped L1 I-Cache + Write-Through L1 D-Cache with DMA Master-1 Write Snooping |
-| [wb_interconnect.v](file:///d:/FINAL YEAR PROJECT/ricscv/ricscv.srcs/sources_1/new/wb_interconnect.v) | 248 | 2-Master (`CPU`, `DMA`) × 7-Slave Wishbone B4 Crossbar & Priority Bus Arbiter |
-| [wb_astra_npu.v](file:///d:/FINAL YEAR PROJECT/ricscv/ricscv.srcs/sources_1/new/wb_astra_npu.v) | 235 | Slave 1 (`0x4000_0000`): $4 \times 4$ INT8 Systolic Array Wrapper, `BUF_A`/`BUF_B`, Dynamic $K$-Tiling FSM |
-| [npu_systolic_array.v](file:///d:/FINAL YEAR PROJECT/ricscv/ricscv.srcs/sources_1/new/npu_systolic_array.v) | 162 | 16-PE ($4 \times 4$) Signed INT8 Input/Weight Skewing & 32-Bit Accumulator Array |
-| [npu_pe.v](file:///d:/FINAL YEAR PROJECT/ricscv/ricscv.srcs/sources_1/new/npu_pe.v) | 52 | Single Systolic Processing Element (`c_out <= c_out + a_in * b_in` with forwarding registers) |
-| [wb_dma_controller.v](file:///d:/FINAL YEAR PROJECT/ricscv/ricscv.srcs/sources_1/new/wb_dma_controller.v) | 175 | Slave 3 / Master 1 (`0x4000_1000`): Autonomous Burst DMA Engine + Completion IRQ |
-| [wb_astra_daaq.v](file:///d:/FINAL YEAR PROJECT/ricscv/ricscv.srcs/sources_1/new/wb_astra_daaq.v) | 228 | Slave 4 (`0x4000_2000`): 4-Mode ASTRA-DAAQ Dependency-Aware Power & Telemetry Controller |
-| [wb_simd_unit.v](file:///d:/FINAL YEAR PROJECT/ricscv/ricscv.srcs/sources_1/new/wb_simd_unit.v) | 212 | Slave 5 (`0x4000_3000`): 4-Lane 16-Bit Signed Packed SIMD Vector Engine & Streaming FSM |
-| [wb_fp32_unit.v](file:///d:/FINAL YEAR PROJECT/ricscv/ricscv.srcs/sources_1/new/wb_fp32_unit.v) | 305 | Slave 6 (`0x4000_4000`): IEEE-754 Binary32 FPU (`FADD.S..FMADD.S`), 64-Bit `mtime`, SoC IRQ Controller |
-| [wb_peripherals.v](file:///d:/FINAL YEAR PROJECT/ricscv/ricscv.srcs/sources_1/new/wb_peripherals.v) | 389 | Slave 2 (`0xFFFF_0000`): Full-Duplex UART, 16 LEDs, 16 Switches, 4 Buttons, Active-High 7-Seg, SPI, I²C |
-| [bram_imem.v](file:///d:/FINAL YEAR PROJECT/ricscv/ricscv.srcs/sources_1/new/bram_imem.v) | 40 | 16 KB Synthesizable Boot Image BRAM (`$readmemh("program.mem")`) + Dynamic UART Bootloader Write Port |
-| [csr_unit.v](file:///d:/FINAL YEAR PROJECT/ricscv/ricscv.srcs/sources_1/new/csr_unit.v) | 182 | RISC-V Machine CSRs (`mvendorid="ASTR"`, `misa=RV32IMFX`, `fcsr`, `mstatus`, `mie`, `mip`, `mcycle`) |
+| [fpga_top.v](ricscv.srcs/sources_1/new/fpga_top.v) | 220 | Top-Level FPGA I/O Ring, Clock Manager (`50 MHz`), Reset Debouncer, UART Loader & Pin Routing |
+| [riscv_core_top.v](ricscv.srcs/sources_1/new/riscv_core_top.v) | 864 | 7-Stage RV32IMFX Pipeline + Wishbone B4 Interconnect + All 7 Slaves & Interrupt Wiring |
+| [astra_l1_caches.v](ricscv.srcs/sources_1/new/astra_l1_caches.v) | 185 | 64-Line Direct-Mapped L1 I-Cache + Write-Through L1 D-Cache with DMA Master-1 Write Snooping |
+| [wb_interconnect.v](ricscv.srcs/sources_1/new/wb_interconnect.v) | 248 | 2-Master (`CPU`, `DMA`) × 7-Slave Wishbone B4 Crossbar & Priority Bus Arbiter |
+| [wb_astra_npu.v](ricscv.srcs/sources_1/new/wb_astra_npu.v) | 235 | Slave 1 (`0x4000_0000`): $4 \times 4$ INT8 Systolic Array Wrapper, `BUF_A`/`BUF_B`, Dynamic $K$-Tiling FSM |
+| [npu_systolic_array.v](ricscv.srcs/sources_1/new/npu_systolic_array.v) | 162 | 16-PE ($4 \times 4$) Signed INT8 Input/Weight Skewing & 32-Bit Accumulator Array |
+| [npu_pe.v](ricscv.srcs/sources_1/new/npu_pe.v) | 52 | Single Systolic Processing Element (`c_out <= c_out + a_in * b_in` with forwarding registers) |
+| [wb_dma_controller.v](ricscv.srcs/sources_1/new/wb_dma_controller.v) | 175 | Slave 3 / Master 1 (`0x4000_1000`): Autonomous Burst DMA Engine + Completion IRQ |
+| [wb_astra_daaq.v](ricscv.srcs/sources_1/new/wb_astra_daaq.v) | 228 | Slave 4 (`0x4000_2000`): 4-Mode ASTRA-DAAQ Dependency-Aware Power & Telemetry Controller |
+| [wb_simd_unit.v](ricscv.srcs/sources_1/new/wb_simd_unit.v) | 212 | Slave 5 (`0x4000_3000`): 4-Lane 16-Bit Signed Packed SIMD Vector Engine & Streaming FSM |
+| [wb_fp32_unit.v](ricscv.srcs/sources_1/new/wb_fp32_unit.v) | 305 | Slave 6 (`0x4000_4000`): IEEE-754 Binary32 FPU (`FADD.S..FMADD.S`), 64-Bit `mtime`, SoC IRQ Controller |
+| [wb_peripherals.v](ricscv.srcs/sources_1/new/wb_peripherals.v) | 389 | Slave 2 (`0xFFFF_0000`): Full-Duplex UART, 16 LEDs, 16 Switches, 4 Buttons, Active-High 7-Seg, SPI, I²C |
+| [bram_imem.v](ricscv.srcs/sources_1/new/bram_imem.v) | 40 | 16 KB Synthesizable Boot Image BRAM (`$readmemh("program.mem")`) + Dynamic UART Bootloader Write Port |
+| [csr_unit.v](ricscv.srcs/sources_1/new/csr_unit.v) | 182 | RISC-V Machine CSRs (`mvendorid="ASTR"`, `misa=RV32IMFX`, `fcsr`, `mstatus`, `mie`, `mip`, `mcycle`) |
 
 ---
 
@@ -126,7 +126,7 @@ Unlike standard RISC-V + accelerator integrations that only claim system integra
 
 All physical implementation numbers below are extracted directly from `ricscv.runs/impl_1/`:
 
-### 5.1 Post-Placement Resource Utilization ([fpga_top_utilization_placed.rpt](file:///d:/FINAL YEAR PROJECT/ricscv/ricscv.runs/impl_1/fpga_top_utilization_placed.rpt))
+### 5.1 Post-Placement Resource Utilization ([fpga_top_utilization_placed.rpt](ricscv.runs/impl_1/fpga_top_utilization_placed.rpt))
 
 | FPGA Resource Category | Used | Available (`xc7a100t`) | Utilization (%) | Architectural Breakdown |
 | :--- | ---: | ---: | ---: | :--- |
@@ -137,7 +137,7 @@ All physical implementation numbers below are extracted directly from `ricscv.ru
 | **DSP48E1 Slices** | **18** | 240 | **7.50%** | `12` (RV32M 32-bit MUL) + `4` (4-Lane SIMD) + `2` (IEEE-754 FPU) |
 | **Bonded IOBs (Pins)** | **59** | 170 | **34.71%** | Clock, Reset, UART, 16 LEDs, 16 Switches, 4 Buttons, 7-Seg, SPI, I²C |
 
-### 5.2 Post-Routing Timing Closure ([fpga_top_timing_summary_routed.rpt](file:///d:/FINAL YEAR PROJECT/ricscv/ricscv.runs/impl_1/fpga_top_timing_summary_routed.rpt))
+### 5.2 Post-Routing Timing Closure ([fpga_top_timing_summary_routed.rpt](ricscv.runs/impl_1/fpga_top_timing_summary_routed.rpt))
 
 | Timing Metric | Measured Value | Target Constraint | Status |
 | :--- | ---: | ---: | :--- |
@@ -148,7 +148,7 @@ All physical implementation numbers below are extracted directly from `ricscv.ru
 | **Worst Pulse Width Slack (`WPWS`)** | **+8.750 ns** | $\ge 0.000\text{ ns}$ | **0 Failing Endpoints (out of 16,690)** |
 | **Achieved Maximum Frequency ($F_{\max}$)** | **54.38 MHz** | $\ge 50.00\text{ MHz}$ | **$+8.8\%$ Frequency Headroom** |
 
-### 5.3 Post-Routing On-Chip Power Breakdown ([fpga_top_power_routed.rpt](file:///d:/FINAL YEAR PROJECT/ricscv/ricscv.runs/impl_1/fpga_top_power_routed.rpt))
+### 5.3 Post-Routing On-Chip Power Breakdown ([fpga_top_power_routed.rpt](ricscv.runs/impl_1/fpga_top_power_routed.rpt))
 
 | Subsystem Instance | RTL Module | Power (mW) | Share of Dynamic Power |
 | :--- | :--- | ---: | ---: |
@@ -170,41 +170,40 @@ All physical implementation numbers below are extracted directly from `ricscv.ru
 
 | Milestone | Verification Script | Subsystem Verified on EDGE Artix-7 100T | CPU Baseline Cycles | Hardware Accelerator Cycles | Measured Speedup / Silicon Result |
 | :--- | :--- | :--- | ---: | ---: | :--- |
-| **M1–M3** | [upload_m2_npu_test.py](file:///d:/FINAL YEAR PROJECT/ricscv/scripts/upload_m2_npu_test.py) | 7-Stage RV32IMFX CPU + Wishbone B4 + $4 \times 4$ Systolic Array | — | — | `NPU_ID = "ASTR"`, 10,000 NumPy matrices bit-exact |
-| **M4** | [upload_m4_npu_gemm.py](file:///d:/FINAL YEAR PROJECT/ricscv/scripts/upload_m4_npu_gemm.py) | $4 \times 4$ Signed INT8 Systolic GEMM (`C = A × B`) | `3,482` cyc | `43` SoC / `19` MAC cyc | **`80x` SoC Speedup / `183x` MAC Core Speedup** |
-| **M5A** | [upload_m5a_tiled_gemm.py](file:///d:/FINAL YEAR PROJECT/ricscv/scripts/upload_m5a_tiled_gemm.py) | $8 \times 8$ Block-Tiled NPU GEMM ($K=8$, 4 tiles, 64 cells) | `~27,856` cyc | `224` SoC / `92` MAC cyc | **64/64 INT32 Cells Matched (`124x` SoC Speedup)** |
-| **M5B** | [upload_m5b_dma_npu.py](file:///d:/FINAL YEAR PROJECT/ricscv/scripts/upload_m5b_dma_npu.py) | Autonomous Burst DMA Controller & 2-Master Arbiter | `331` cyc | `64` DMA burst cyc | **`5.17x` Data-Movement Speedup (Zero CPU Copy)** |
-| **M6A** | [upload_m6a_simd_bench.py](file:///d:/FINAL YEAR PROJECT/ricscv/scripts/upload_m6a_simd_bench.py) | 4-Lane 16-Bit Packed SIMD Vector DSP (8 Opcodes + 32-Elem Dot) | `747` cyc | `40` SoC / `8` SIMD cyc | **`93x` Core Speedup / `18.6x` SoC Speedup (`Dot=-2832`)** |
-| **M6B** | [upload_m6b_fp32_bench.py](file:///d:/FINAL YEAR PROJECT/ricscv/scripts/upload_m6b_fp32_bench.py) | IEEE-754 Single-Precision FP32 Engine (`FADD.S..FMADD.S`) | `290` cyc | `12` FPU core cyc | **`24x` FPU Speedup (`4-Elem FMA DotProd = 12.0`)** |
-| **M7** | [upload_m7_daaq_power.py](file:///d:/FINAL YEAR PROJECT/ricscv/scripts/upload_m7_daaq_power.py) | 4-Mode ASTRA-DAAQ Power Ablation + `DMA->SIMD->NPU->FP32` | Mode B: `74` stalls | Mode D: `0` stalls | **`E_Saved = 2363` (`+12.6%` over Mode C), `0` Stalls** |
-| **M8** | [upload_m8_periph_cache_irq.py](file:///d:/FINAL YEAR PROJECT/ricscv/scripts/upload_m8_periph_cache_irq.py) | L1 I$/D$ + DMA Snoops + Timer/IRQs + SPI DAC + I²C + 7-Seg | — | — | `I$=90/598`, `D$=8/1/4`, `IRQs=7`, `SPI=2748`, `I2C=123` |
-| **SDK/OS** | [my_first_astra_app.py](file:///d:/FINAL YEAR PROJECT/ricscv/applications/my_first_astra_app.py) / [my_first_c_app.c](file:///d:/FINAL YEAR PROJECT/ricscv/applications/my_first_c_app.c) | 3-Tier Developer Platform (Python SDK, Bare-Metal C SDK, Product OS) | — | — | All 3 Programming Flows Verified on `COM3` + `7777` 7-Seg |
+| **M1–M3** | [upload_m2_npu_test.py](scripts/upload_m2_npu_test.py) | 7-Stage RV32IMFX CPU + Wishbone B4 + $4 \times 4$ Systolic Array | — | — | `NPU_ID = "ASTR"`, 10,000 NumPy matrices bit-exact |
+| **M4** | [upload_m4_npu_gemm.py](scripts/upload_m4_npu_gemm.py) | $4 \times 4$ Signed INT8 Systolic GEMM (`C = A × B`) | `3,482` cyc | `43` SoC / `19` MAC cyc | **`80x` SoC Speedup / `183x` MAC Core Speedup** |
+| **M5A** | [upload_m5a_tiled_gemm.py](scripts/upload_m5a_tiled_gemm.py) | $8 \times 8$ Block-Tiled NPU GEMM ($K=8$, 4 tiles, 64 cells) | `~27,856` cyc | `224` SoC / `92` MAC cyc | **64/64 INT32 Cells Matched (`124x` SoC Speedup)** |
+| **M5B** | [upload_m5b_dma_npu.py](scripts/upload_m5b_dma_npu.py) | Autonomous Burst DMA Controller & 2-Master Arbiter | `331` cyc | `64` DMA burst cyc | **`5.17x` Data-Movement Speedup (Zero CPU Copy)** |
+| **M6A** | [upload_m6a_simd_bench.py](scripts/upload_m6a_simd_bench.py) | 4-Lane 16-Bit Packed SIMD Vector DSP (8 Opcodes + 32-Elem Dot) | `747` cyc | `40` SoC / `8` SIMD cyc | **`93x` Core Speedup / `18.6x` SoC Speedup (`Dot=-2832`)** |
+| **M6B** | [upload_m6b_fp32_bench.py](scripts/upload_m6b_fp32_bench.py) | IEEE-754 Single-Precision FP32 Engine (`FADD.S..FMADD.S`) | `290` cyc | `12` FPU core cyc | **`24x` FPU Speedup (`4-Elem FMA DotProd = 12.0`)** |
+| **M7** | [upload_m7_daaq_power.py](scripts/upload_m7_daaq_power.py) | 4-Mode ASTRA-DAAQ Power Ablation + `DMA->SIMD->NPU->FP32` | Mode B: `74` stalls | Mode D: `0` stalls | **`E_Saved = 2363` (`+12.6%` over Mode C), `0` Stalls** |
+| **M8** | [upload_m8_periph_cache_irq.py](scripts/upload_m8_periph_cache_irq.py) | L1 I$/D$ + DMA Snoops + Timer/IRQs + SPI DAC + I²C + 7-Seg | — | — | `I$=90/598`, `D$=8/1/4`, `IRQs=7`, `SPI=2748`, `I2C=123` |
+| **SDK/OS** | [my_first_astra_app.py](applications/my_first_astra_app.py) / [my_first_c_app.c](applications/my_first_c_app.c) | 3-Tier Developer Platform (Python SDK, Bare-Metal C SDK, Product OS) | — | — | All 3 Programming Flows Verified on `COM3` + `7777` 7-Seg |
 
 ---
 
 ## 7. Complete Gallery of Physical EDGE Artix-7 100T Hardware Captures
 
-````carousel
-![Milestone 4: 4x4 INT8 Systolic NPU Hardware Benchmark (80x SoC / 183x MAC Speedup)](C:/Users/skali/.gemini/antigravity/brain/5c286792-f9d5-49d3-9208-a1e454c10cff/m4_hardware_benchmark_capture.jpg)
-<!-- slide -->
-![Milestone 5A: 8x8 Block-Tiled NPU GEMM (K=8, 64/64 Cells Verified)](C:/Users/skali/.gemini/antigravity/brain/5c286792-f9d5-49d3-9208-a1e454c10cff/m5a_tiled_8x8_hardware_capture.jpg)
-<!-- slide -->
-![Milestone 5B: Autonomous DMA Controller & 2-Master Bus Arbiter (5.17x Speedup)](C:/Users/skali/.gemini/antigravity/brain/5c286792-f9d5-49d3-9208-a1e454c10cff/m5b_dma_hardware_capture.jpg)
-<!-- slide -->
-![Milestone 6A: 4-Lane 16-Bit Packed SIMD Benchmark (93x Core Speedup)](C:/Users/skali/.gemini/antigravity/brain/5c286792-f9d5-49d3-9208-a1e454c10cff/m6a_simd_hardware_capture.jpg)
-<!-- slide -->
-![Milestone 6B: IEEE-754 Single-Precision FP32 Hardware Benchmark (24x Speedup)](C:/Users/skali/.gemini/antigravity/brain/5c286792-f9d5-49d3-9208-a1e454c10cff/m6b_fp32_hardware_capture.jpg)
-<!-- slide -->
-![Milestone 7: 4-Mode ASTRA-DAAQ Power Ablation & Full Heterogeneous Pipeline](C:/Users/skali/.gemini/antigravity/brain/5c286792-f9d5-49d3-9208-a1e454c10cff/m7_m8_full_soc_hardware_capture.jpg)
-<!-- slide -->
-![Milestone 8: L1 I$/D$ Caches, DMA Snoop Coherency, Timers, IRQs, SPI DAC, I2C & Switches](C:/Users/skali/.gemini/antigravity/brain/5c286792-f9d5-49d3-9208-a1e454c10cff/m8_periph_cache_irq_hardware_capture.jpg)
-<!-- slide -->
-![Way 1: Arduino-Style High-Level Python Developer SDK on Hardware (sw[5]=32)](C:/Users/skali/.gemini/antigravity/brain/5c286792-f9d5-49d3-9208-a1e454c10cff/sdk_app_sw32_hardware_capture.jpg)
-<!-- slide -->
-![Way 2: Bare-Metal C SDK Application (my_first_c_app.c) Compiled & Verified on Hardware](C:/Users/skali/.gemini/antigravity/brain/5c286792-f9d5-49d3-9208-a1e454c10cff/c_sdk_hardware_capture.jpg)
-<!-- slide -->
-![Way 3: Interactive On-Chip Product OS v1.0 Executing Live Commands on Hardware](C:/Users/skali/.gemini/antigravity/brain/5c286792-f9d5-49d3-9208-a1e454c10cff/product_os_hardware_capture.jpg)
-````
+``![Milestone 4: 4x4 INT8 Systolic NPU Hardware Benchmark (80x SoC / 183x MAC Speedup)](docs/hardware_captures/m4_hardware_benchmark_capture.jpg)
+
+![Milestone 5A: 8x8 Block-Tiled NPU GEMM (K=8, 64/64 Cells Verified)](docs/hardware_captures/m5a_tiled_8x8_hardware_capture.jpg)
+
+![Milestone 5B: Autonomous DMA Controller & 2-Master Bus Arbiter (5.17x Speedup)](docs/hardware_captures/m5b_dma_hardware_capture.jpg)
+
+![Milestone 6A: 4-Lane 16-Bit Packed SIMD Benchmark (93x Core Speedup)](docs/hardware_captures/m6a_simd_hardware_capture.jpg)
+
+![Milestone 6B: IEEE-754 Single-Precision FP32 Hardware Benchmark (24x Speedup)](docs/hardware_captures/m6b_fp32_hardware_capture.jpg)
+
+![Milestone 7: 4-Mode ASTRA-DAAQ Power Ablation & Full Heterogeneous Pipeline](docs/hardware_captures/m7_m8_full_soc_hardware_capture.jpg)
+
+![Milestone 8: L1 I$/D$ Caches, DMA Snoop Coherency, Timers, IRQs, SPI DAC, I2C & Switches](docs/hardware_captures/m8_periph_cache_irq_hardware_capture.jpg)
+
+![Way 1: Arduino-Style High-Level Python Developer SDK on Hardware (sw[5]=32)](docs/hardware_captures/sdk_app_sw32_hardware_capture.jpg)
+
+![Way 2: Bare-Metal C SDK Application (my_first_c_app.c) Compiled & Verified on Hardware](docs/hardware_captures/c_sdk_hardware_capture.jpg)
+
+![Way 3: Interactive On-Chip Product OS v1.0 Executing Live Commands on Hardware](docs/hardware_captures/product_os_hardware_capture.jpg)
+``
 
 ---
 
