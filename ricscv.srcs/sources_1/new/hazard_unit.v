@@ -25,6 +25,7 @@ module hazard_unit (
     input  wire        mul_busy,
     input  wire        div_busy,
     input  wire        stall_ex2,
+    input  wire        stall_mem, // Memory stage bus wait-state stall
 
     // Branch misprediction control
     input  wire        branch_mispredict,
@@ -36,7 +37,6 @@ module hazard_unit (
     output reg         flush_id,
     output reg         flush_ex1
 );
-
 
     //===============================================
     // 1. LOAD-USE HAZARD
@@ -77,12 +77,11 @@ module hazard_unit (
         flush_ex1 = 0;
 
         //-------------------------------------------
-        // LOAD-USE => Stall IF + ID, freeze EX1
+        // LOAD-USE => Stall IF + ID, allow EX1 to advance
         //-------------------------------------------
         if (load_use_hazard) begin
             stall_if  = 1;
             stall_id  = 1;
-            stall_ex1 = 1;
         end
 
         //-------------------------------------------
@@ -95,9 +94,18 @@ module hazard_unit (
         end
 
         //-------------------------------------------
-        // EX2 STALL (from UART or Divider) => Stall all earlier stages
+        // EX2 STALL (from Divider) => Stall all earlier stages
         //-------------------------------------------
         if (stall_ex2) begin
+            stall_if  = 1;
+            stall_id  = 1;
+            stall_ex1 = 1;
+        end
+
+        //-------------------------------------------
+        // MEM STALL (Wishbone Bus Wait-State) => Stall all earlier stages
+        //-------------------------------------------
+        if (stall_mem) begin
             stall_if  = 1;
             stall_id  = 1;
             stall_ex1 = 1;

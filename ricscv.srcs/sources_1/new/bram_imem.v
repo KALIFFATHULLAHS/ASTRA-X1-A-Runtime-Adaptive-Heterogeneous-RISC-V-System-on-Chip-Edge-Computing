@@ -17,9 +17,13 @@ module bram_imem(
     integer i;
     initial begin
         for (i = 0; i < 4096; i = i + 1) begin
-            mem[i] = 32'h00000013; // Initialize memory to NOPs; UART bootloader overwrites dynamically
+            mem[i] = 32'h00000013; // Default NOP padding
         end
-        $display("[BRAM] Memory initialized with NOPs successfully.");
+        // Synthesizable On-Chip Boot ROM/RAM Image (also dynamically overwritable via UART Bootloader)
+        $readmemh("program.mem", mem);
+        `ifndef SYNTHESIS
+        $display("[BRAM] Initialized from program.mem successfully.");
+        `endif
     end
 
     //--------------------------------------------------

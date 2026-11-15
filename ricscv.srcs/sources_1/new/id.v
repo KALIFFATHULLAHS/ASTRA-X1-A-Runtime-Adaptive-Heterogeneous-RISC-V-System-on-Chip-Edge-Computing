@@ -12,6 +12,7 @@ module id (
 
     // Hazard control
     input  wire        stall_id,
+    input  wire        stall_ex1,
     input  wire        flush_id,
 
     // Register file interface
@@ -159,7 +160,14 @@ module id (
         else if (flush_id) begin
             ex1_valid    <= 1'b0;
         end
-        else if (!stall_id) begin
+        else if (stall_id) begin
+            if (!stall_ex1) begin
+                // ID is stalled, but EX1 is free to advance: insert bubble into EX1
+                ex1_valid <= 1'b0;
+            end
+            // else if stall_ex1 is also asserted: EX1 is frozen, hold state!
+        end
+        else if (!stall_ex1) begin
             ex1_pc       <= id_pc_in;
             ex1_rs1      <= rs1_data;
             ex1_rs2      <= rs2_data;

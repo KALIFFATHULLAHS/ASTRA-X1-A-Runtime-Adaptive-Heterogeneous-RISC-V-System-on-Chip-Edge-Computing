@@ -21,11 +21,18 @@
 *.pb
 *.rpx
 *.rpt
+!docs/vivado_reports/*.rpt
 *.vdi
 *.vds
 *.hwdef
 *.wdf
 *.dmp
+*.wdb
+*.bak
+*.exe
+*.egg-info/
+build/
+dist/
 
 # Generated simulation/stub files
 *_stub.v

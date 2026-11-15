@@ -32,6 +32,9 @@ module ex2 (
     // CSR unit
     input  wire [31:0] csr_rdata,
 
+    // Memory Stage Stall (Wait-state from Wishbone bus)
+    input  wire        stall_mem,
+
     // Outputs to MEM stage
     output reg         mem_valid,
     output reg [31:0]  mem_result,
@@ -59,12 +62,13 @@ module ex2 (
     wire        is_jalr = ex2_ctrl_bus_in[10];
     wire        is_csr  = ex2_ctrl_bus_in[9];
 
-    //-----------------------------------------------------
-    // EX2 stall logic for MUL/DIV + UART
-    //-----------------------------------------------------
-    wire stall_uart = ex2_valid_in && ex2_ctrl_bus_in[13] && (ex2_comb_result == 32'hFFFF_0000) && uart_tx_busy;
+    // Suppress unused warnings
+    wire _unused = &{1'b0, opcode, funct3, funct7, mul_start, mul_busy, uart_tx_busy};
 
-    assign stall_ex2 = div_start || div_busy || stall_uart;
+    //-----------------------------------------------------
+    // EX2 stall logic for Multi-cycle Divider
+    //-----------------------------------------------------
+    assign stall_ex2 = div_start || div_busy;
 
     //-----------------------------------------------------
     // ALU Implementation
@@ -96,7 +100,6 @@ module ex2 (
         end
     end
 
-
     // Approx ALU (truncating 4 LSBs)
     always @(*) begin
         alu_approx = { (ex2_op_a_in[31:4] + ex2_op_b_in[31:4]), 4'b0000 };
@@ -114,7 +117,6 @@ module ex2 (
         (ex2_ctrl_bus_in[23]) ? muldiv_result :
                                 alu_final;
 
-
     //-----------------------------------------------------
     // EX2 → MEM pipeline register
     //-----------------------------------------------------
@@ -128,6 +130,9 @@ module ex2 (
             mem_instr      <= 32'd0;
             mem_store_data <= 32'd0;
         end 
+        else if (stall_mem) begin
+            // Hold output registers steady while MEM stage is waiting on bus acknowledge
+        end
         else if (!stall_ex2 && ex2_valid_in) begin
             mem_valid      <= 1;
             mem_pc         <= ex2_pc_in;
@@ -141,6 +146,5 @@ module ex2 (
             mem_store_data <= 32'd0;
         end
     end
-
 
 endmodule

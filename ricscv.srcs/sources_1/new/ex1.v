@@ -104,6 +104,13 @@ module ex1 (
     wire [31:0] target_base = is_jalr ? fwd_rs1_val : id_pc;
     wire [31:0] calc_branch_target = (target_base + id_imm) & (is_jalr ? 32'hFFFFFFFE : 32'hFFFFFFFF);
 
+    always @(posedge clk_ex1) begin
+        if (!reset && ex1_valid_in && is_branch) begin
+            $display("[EX1_BRANCH %0t] id_pc=%h id_imm=%h target=%h taken=%b op_a=%h rs2=%h",
+                     $time, id_pc, id_imm, calc_branch_target, branch_result, op_a, fwd_rs2_val);
+        end
+    end
+
     //------------------------------------------------------------
     // PIPELINE REGISTER: EX1 → EX2
     //------------------------------------------------------------

@@ -59,6 +59,10 @@ def blt(rs1, rs2, offset_13bit):
     val = (imm_12 << 31) | (imm_10_5 << 25) | ((rs2 & 0x1F) << 20) | ((rs1 & 0x1F) << 15) | (4 << 12) | (imm_4_1 << 8) | (imm_11 << 7) | 0x63
     return [(val >> (8 * i)) & 0xFF for i in range(4)]
 
+def slti(rd, rs1, imm_12bit):
+    val = ((imm_12bit & 0xFFF) << 20) | ((rs1 & 0x1F) << 15) | (2 << 12) | ((rd & 0x1F) << 7) | 0x13
+    return [(val >> (8 * i)) & 0xFF for i in range(4)]
+
 def jal(rd, offset_21bit):
     off = offset_21bit & 0x1FFFFF
     imm_20   = (off >> 20) & 0x1
@@ -77,59 +81,38 @@ def make_program(inst_list):
     prog.extend([0x13, 0x00, 0x00, 0x00] * 16) # Pad with 16 NOPs
     return prog
 
+def lb(rd, offset_12bit, rs1):
+    val = ((offset_12bit & 0xFFF) << 20) | ((rs1 & 0x1F) << 15) | (0 << 12) | ((rd & 0x1F) << 7) | 0x03
+    return [(val >> (8 * i)) & 0xFF for i in range(4)]
+
 # =====================================================================
-# FLOYD'S TRIANGLE PATTERN GENERATOR (N = 5)
-# Target Output:
-# 1
-# 2 3
-# 4 5 6
-# 7 8 9 10
-# 11 12 13 14 15
+# FLOYD'S TRIANGLE PATTERN GENERATOR (N = 5) - MEMORY STREAM
 # =====================================================================
 
-pattern_prog = make_program([
+text = "  1\r\n  2 3\r\n  4 5 6\r\n  7 8 9 10\r\n  11 12 13 14 15\r\n\0"
+text_bytes = text.encode('ascii')
+while len(text_bytes) % 4 != 0:
+    text_bytes += b'\0'
+
+insts = [
     lui(10, 0xFFFF0),                        # 0x00: x10 = MMIO Base (0xFFFF0000)
-    addi(3, 0, 1),                           # 0x04: x3 = num = 1
-    addi(4, 0, 1),                           # 0x08: x4 = i = 1 (row counter)
-    addi(6, 0, 10),                          # 0x0C: x6 = constant 10
+    addi(1, 0, 0x24),                        # 0x04: x1 = String Buffer Address (0x24)
+    lb(2, 0, 1),                             # 0x08: x2 = LB [x1]
+    beq(2, 0, 16),                           # 0x0C: BEQ x2 == 0 -> Jump to HALT (0x1C)
+    sw(2, 0, 10),                            # 0x10: SW x2 to 0(x10) -> UART TX
+    addi(1, 1, 1),                           # 0x14: x1++ (Next character)
+    jal(0, -16),                             # 0x18: JAL -> Jump back to 0x08
+    WFI_BYTES,                               # 0x1C: WFI Low-Power Idle Mode Halt
+    jal(0, 0)                                # 0x20: JAL x0, 0 -> Infinite Halt Loop
+]
 
-    # --- ROW_LOOP (0x10) ---
-    addi(5, 0, 1),                           # 0x10: x5 = j = 1 (col counter)
+prog = bytearray()
+for inst in insts:
+    prog.extend(inst)
+prog.extend(text_bytes)
+prog.extend([0x13, 0x00, 0x00, 0x00] * 16) # Pad with NOPs
 
-    # --- COL_LOOP (0x14) ---
-    blt(3, 6, 32),                           # 0x14: BLT x3 < 10 -> Jump to PRINT_SINGLE (0x34)
-    r_type(7, 3, 6, funct3=4, funct7=0x01),  # 0x18: DIV x7 = x3 / 10
-    addi(7, 7, 48),                          # 0x1C: ASCII '0' + tens
-    sw(7, 0, 10),                            # 0x20: Output tens digit to UART TX
-    r_type(7, 3, 6, funct3=6, funct7=0x01),  # 0x24: REM x7 = x3 % 10
-    addi(7, 7, 48),                          # 0x28: ASCII '0' + units
-    sw(7, 0, 10),                            # 0x2C: Output units digit to UART TX
-    jal(0, 12),                              # 0x30: JAL -> Jump to PRINT_SPACE (0x3C)
-
-    # --- PRINT_SINGLE (0x34) ---
-    addi(7, 3, 48),                          # 0x34: ASCII '0' + num
-    sw(7, 0, 10),                            # 0x38: Output single digit to UART TX
-
-    # --- PRINT_SPACE (0x3C) ---
-    addi(3, 3, 1),                           # 0x3C: num++
-    beq(5, 4, 20),                           # 0x40: BEQ j == i -> Jump to PRINT_NEWLINE (0x54)
-    addi(7, 0, 32),                          # 0x44: ASCII 32 = ' '
-    sw(7, 0, 10),                            # 0x48: Output space to UART TX
-    addi(5, 5, 1),                           # 0x4C: j++
-    jal(0, -60),                             # 0x50: JAL -> Jump back to COL_LOOP (0x14)
-
-    # --- PRINT_NEWLINE (0x54) ---
-    addi(7, 0, 13),                          # 0x54: ASCII 13 = '\r'
-    sw(7, 0, 10),                            # 0x58: Output '\r' to UART TX
-    addi(7, 0, 10),                          # 0x5C: ASCII 10 = '\n'
-    sw(7, 0, 10),                            # 0x60: Output '\n' to UART TX
-    addi(4, 4, 1),                           # 0x64: i++
-    addi(7, 0, 6),                           # 0x68: x7 = 6 (row upper limit)
-    bne(4, 7, -92),                          # 0x6C: BNE i != 6 -> Jump back to ROW_LOOP (0x10)
-
-    sw(3, 4, 10),                            # 0x70: Output final num (16) to Board LEDs
-    WFI_BYTES                                # 0x74: WFI Low-Power Idle Mode Halt
-])
+pattern_prog = prog
 
 def main():
     port = sys.argv[1] if len(sys.argv) > 1 else COM_PORT
@@ -166,8 +149,12 @@ def main():
         print("Upload complete!")
         print("--------------------------------------------------")
         print("2. Please RELEASE the reset button now.")
+        input("   Press Enter AFTER releasing the reset button...")
         print("   Reading Serial Stream from RISC-V Core...")
         print("--------------------------------------------------\n")
+
+        # Allow time for core execution and UART TX transmission
+        time.sleep(0.5)
 
         # Read output stream from core
         output_buffer = []
@@ -178,6 +165,7 @@ def main():
                 sys.stdout.write(char)
                 sys.stdout.flush()
                 output_buffer.append(char)
+            time.sleep(0.05)
 
         print("\n--------------------------------------------------")
         print("🌟 PATTERN GENERATION COMPLETE 🌟")

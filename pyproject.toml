@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "astra-x1-sdk"
+version = "1.0.0"
+description = "Multi-Language Developer SDK, Compiler, and Hardware Bootloader for the ASTRA-X1 Runtime-Adaptive Heterogeneous RISC-V SoC"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+authors = [
+    {name = "KALIFFATHULLAH S"}
+]
+dependencies = [
+    "pyserial>=3.5",
+    "reportlab>=4.0"
+]
+
+[project.urls]
+Homepage = "https://github.com/KALIFFATHULLAHS/ASTRA-X1-A-Runtime-Adaptive-Heterogeneous-RISC-V-System-on-Chip-Edge-Computing"
+Repository = "https://github.com/KALIFFATHULLAHS/ASTRA-X1-A-Runtime-Adaptive-Heterogeneous-RISC-V-System-on-Chip-Edge-Computing.git"
+
+[tool.setuptools.packages.find]
+include = ["tools*"]

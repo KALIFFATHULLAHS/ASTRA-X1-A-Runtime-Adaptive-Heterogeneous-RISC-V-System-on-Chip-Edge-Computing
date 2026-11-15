@@ -1,0 +1,113 @@
+\documentclass[conference]{IEEEtran}
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{multirow}
+
+\begin{document}
+
+\title{ASTRA-X1: A Runtime-Adaptive Heterogeneous RISC-V System-on-Chip with Floating-Point, SIMD, Systolic NPU Acceleration, and Dependency-Aware Quiescence for Edge Computing}
+
+\author{\IEEEauthorblockN{Final Year Project Research Team}
+\IEEEauthorblockA{\textit{Department of Electronics and Communication / Computer Engineering} \\
+Target Silicon: Xilinx Artix-7 XC7A100T-2FTG256C @ 50 MHz (EDGE Artix-7 100T Platform)}
+}
+
+\maketitle
+
+\begin{abstract}
+Edge-intelligence and cyber-physical workloads increasingly demand concurrent execution of scalar control flow, packed vector digital signal processing (DSP), dense quantized neural network matrix multiplication, autonomous block data movement, and IEEE-754 floating-point post-processing under strict milliwatt power constraints. While heterogeneous System-on-Chip (SoC) architectures address raw compute throughput, applying independent local idle-timeout clock gating across tightly coupled producer-consumer engines introduces severe cold-wake pipeline stalls, and autonomous Direct Memory Access (DMA) transfers incur software cache-invalidation overhead before domains can safely quiesce. This paper presents \textbf{ASTRA-X1}, a 32-bit 7-stage pipelined \texttt{RV32IMFX} heterogeneous SoC integrating a 2-Master $\times$ 7-Slave Wishbone B4 interconnect, a 16-PE ($4 \times 4$) signed INT8 systolic array NPU, a 4-lane 16-bit packed SIMD engine, an IEEE-754 single-precision FP32 unit, an autonomous burst DMA controller, and a snoop-coherent L1 instruction/data cache hierarchy. To eliminate cross-engine wake-up stalls and maximize idle energy recovery, we propose \textbf{ASTRA-DAAQ} (\textit{Cross-Domain Dependency-Aware Adaptive Quiescence}), a hardware power controller that combines a producer-consumer dependency matrix with a break-even energy evaluator and single-cycle DMA write-snoop cache coherency. Implemented and verified in physical Xilinx Artix-7 (\texttt{xc7a100t-2ftg256c}) silicon at 50~MHz ($\text{WNS} = +1.612\text{ ns}$, $F_{\max} = 54.38\text{ MHz}$, $302\text{ mW}$ total on-chip power), ASTRA-X1 achieves $80\times$ SoC-level ($183\times$ MAC-core) NPU speedup, $93\times$ SIMD core speedup, $24\times$ FP32 speedup, and $5.17\times$ DMA transfer speedup while eliminating all 74 cold-wake stall cycles and improving dynamic energy savings by $+12.6\%$ over fixed-threshold gating.
+\end{abstract}
+
+\begin{IEEEkeywords}
+RISC-V, Heterogeneous SoC, Systolic Array NPU, Packed SIMD, IEEE-754 FPU, Dependency-Aware Clock Gating, Snoop-Coherent Cache, FPGA Verification.
+\end{IEEEkeywords}
+
+\section{Introduction}
+Modern edge-computing platforms must execute multi-stage pipelines—such as sensor acquisition over SPI/I$^2$C, DMA block buffering, 16-bit SIMD signal filtering, 8-bit quantized neural network inference, and 32-bit IEEE-754 floating-point Kalman fusion—within a sub-watt thermal envelope. Homogeneous scalar RISC-V processors require thousands of clock cycles for small matrix-vector kernels, whereas naive heterogeneous integrations suffer from two microarchitectural inefficiencies:
+\begin{enumerate}
+    \item \textbf{Cold-Wake Pipeline Hazards:} When each accelerator employs an independent local idle timer (Mode~B), downstream engines (e.g., NPU or FPU) prematurely enter clock-gated quiescence while upstream producers (DMA or SIMD) are actively preparing tiles, incurring multi-cycle wake-up penalties ($74$ stall cycles measured per pipeline pass).
+    \item \textbf{DMA Cache Coherency Overhead:} When an autonomous DMA master writes accelerator results into system SRAM, conventional cached RISC-V cores require explicit software cache flushes before reading updated lines.
+\end{enumerate}
+
+To overcome these limitations, we design and physically verify \textbf{ASTRA-X1} on an Artix-7 100T FPGA, introducing:
+\begin{itemize}
+    \item A complete \textbf{7-Stage In-Order \texttt{RV32IMFX} Core} with a 64-entry Branch History Table (BHT), full forwarding, hardware multiply/divide, Machine-mode CSRs (\texttt{mvendorid="ASTR"}, \texttt{misa=0x40001125}), and a 64-line direct-mapped L1 I-Cache and write-through L1 D-Cache with single-cycle DMA Master-1 write snooping.
+    \item Five memory-mapped hardware engines on a \textbf{2-Master $\times$ 7-Slave Wishbone B4 Crossbar}: a $4 \times 4$ INT8 Systolic NPU (\texttt{0x4000\_0000}), an Autonomous Burst DMA Controller (\texttt{0x4000\_1000}), the \textbf{ASTRA-DAAQ} Power Controller (\texttt{0x4000\_2000}), a 4-Lane INT16 Packed SIMD Unit (\texttt{0x4000\_3000}), and an IEEE-754 Binary32 FP32 Engine with 64-bit \texttt{mtime}/\texttt{mtimecmp} and SoC Interrupt Controller (\texttt{0x4000\_4000}).
+    \item A \textbf{Three-Tier Developer Platform} comprising a Dual-Mode Boot BRAM, an interactive on-chip OS shell, a bare-metal C SDK, and a high-level Python-to-RISC-V compiler SDK.
+\end{itemize}
+
+\section{ASTRA-DAAQ Microarchitecture \& Novelty}
+Unlike conventional local idle-timeout gating, \textbf{ASTRA-DAAQ} (\texttt{wb\_astra\_daaq.v}) monitors live hardware busy signals ($\text{busy}_{\text{DMA}}, \text{busy}_{\text{SIMD}}, \text{busy}_{\text{NPU}}, \text{busy}_{\text{FPU}}$) and Wishbone slave strobes ($s_1\dots s_6$). For each engine $i$, quiescence is governed by:
+\begin{equation}
+    \text{Gate}_i = \left( T_{\text{idle}, i} \ge T_{\text{thresh}, i}(\Phi) \right) \land \neg \text{Busy}_i \land \bigwedge_{j \in \mathcal{P}(i)} \neg \text{Active}_j
+\end{equation}
+where $\mathcal{P}(i)$ is the programmable producer dependency set for consumer engine $i$, and $T_{\text{thresh}, i}(\Phi)$ is dynamically modulated by architectural phase hints $\Phi \in \{\text{DMA}, \text{SIMD}, \text{NPU}, \text{FPU}, \text{IDLE}\}$ to satisfy the break-even energy condition:
+\begin{equation}
+    E_{\text{saved}, i} = \Delta P_i \cdot T_{\text{idle}, i} - E_{\text{wake}, i} > 0
+\end{equation}
+
+Simultaneously, the L1 Data Cache (\texttt{astra\_l1\_caches.v}) snoops Master-1 DMA write transactions (\texttt{dma\_cyc \&\& dma\_stb \&\& dma\_we \&\& dma\_ack}) to cacheable SRAM (\texttt{0x0000\_0000--0x3FFF\_FFFF}), updating matching cache lines in a single clock cycle.
+
+\section{Silicon Implementation \& Experimental Results}
+
+\begin{table}[htbp]
+\caption{Vivado 2025.1 Placed \& Routed Utilization and Power on Xilinx Artix-7 (\texttt{xc7a100t-2ftg256c} @ 50 MHz)}
+\begin{center}
+\begin{tabular}{lrrr}
+\toprule
+\textbf{Resource / Metric} & \textbf{Used} & \textbf{Available} & \textbf{Utilization / Margin} \\
+\midrule
+Slice LUTs & 19,670 & 63,400 & 31.03\% \\
+Slice Registers (FFs) & 16,561 & 126,800 & 13.06\% (0 Latches) \\
+Occupied Slices & 6,343 & 15,850 & 40.02\% \\
+Block RAM (\texttt{RAMB36E1}) & 8 (32 KB) & 135 & 5.93\% \\
+DSP48E1 Slices & 18 & 240 & 7.50\% \\
+Worst Negative Slack (WNS) & $+1.612\text{ ns}$ & $\ge 0.000\text{ ns}$ & $F_{\max} = 54.38\text{ MHz}$ \\
+Worst Hold Slack (WHS) & $+0.060\text{ ns}$ & $\ge 0.000\text{ ns}$ & 0 Failing Endpoints \\
+Total On-Chip Power & $302\text{ mW}$ & — & $204\text{ mW}$ Dyn / $98\text{ mW}$ Stat \\
+\bottomrule
+\end{tabular}
+\end{center}
+\end{table}
+
+\begin{table}[htbp]
+\caption{Measured Hardware Benchmarks on Physical EDGE Artix-7 100T}
+\begin{center}
+\begin{tabular}{llrrl}
+\toprule
+\textbf{Milestone} & \textbf{Workload} & \textbf{CPU Cyc} & \textbf{Accel Cyc} & \textbf{Speedup} \\
+\midrule
+M4 NPU & $4 \times 4$ INT8 GEMM & 3,482 & 43 (19 MAC) & $\mathbf{80\times}$ ($\mathbf{183\times}$) \\
+M5A Tiled & $8 \times 8$ Tiled GEMM ($K=8$) & 27,856 & 224 (92 MAC) & $\mathbf{124\times}$ SoC \\
+M5B DMA & 16-Word Block Transfer & 331 & 64 & $\mathbf{5.17\times}$ DMA \\
+M6A SIMD & 32-Elem INT16 DotProd & 747 & 40 (8 Core) & $\mathbf{93\times}$ Core \\
+M6B FP32 & 4-Elem IEEE-754 FMA & 290 & 12 & $\mathbf{24\times}$ FPU \\
+\bottomrule
+\end{tabular}
+\end{center}
+\end{table}
+
+\begin{table}[htbp]
+\caption{4-Mode ASTRA-DAAQ Power \& Stall Ablation in Silicon}
+\begin{center}
+\begin{tabular}{lrrrrr}
+\toprule
+\textbf{Policy Mode} & \textbf{NPU Gate} & \textbf{SIMD Gate} & \textbf{FPU Gate} & \textbf{Energy Saved} & \textbf{Wake Stalls} \\
+\midrule
+Mode A (Baseline) & 0 & 0 & 0 & 0 & 0 \\
+Mode B (Naive Local) & 253 & 287 & 298 & 2,733 & \textbf{74} \\
+Mode C (Fixed DAAQ) & 176 & 230 & 215 & 2,098 & \textbf{0} \\
+Mode D (Adap. DAAQ) & \textbf{212} & \textbf{258} & \textbf{238} & \textbf{2,363} & \textbf{0} \\
+\bottomrule
+\end{tabular}
+\end{center}
+\end{table}
+
+\section{Conclusion}
+We have presented the complete RTL design, FPGA synthesis, physical silicon verification, and 3-tier developer platform for \textbf{ASTRA-X1}. By combining heterogeneous compute engines with \textbf{ASTRA-DAAQ} dependency-aware quiescence and snoop-coherent L1 caching, ASTRA-X1 achieves up to $183\times$ compute acceleration and $+12.6\%$ higher dynamic energy recovery with zero cold-wake stalls on physical Artix-7 silicon.
+
+\end{document}
