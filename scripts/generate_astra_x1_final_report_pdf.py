@@ -183,9 +183,18 @@ def build_pdf(out_path, img_dir):
     ))
 
     # =========================================================================
-    # SECTION 2: GLOBAL MEMORY MAP & PATENT NOVELTY CLAIMS
+    # SECTION 2: SYSTEM ARCHITECTURE, GLOBAL MEMORY MAP & PATENT NOVELTY CLAIMS
     # =========================================================================
-    story.append(Paragraph("2. Global Memory Map & Wishbone B4 Address Space", h1_style))
+    story.append(Paragraph("2. ASTRA-X1 System-on-Chip Architecture & Global Memory Map", h1_style))
+    arch_img_path = os.path.join(img_dir, "astra_x1_system_architecture.jpg")
+    if os.path.exists(arch_img_path):
+        story.append(KeepTogether([
+            Image(arch_img_path, width=7.1 * inch, height=3.45 * inch),
+            Paragraph(
+                "Figure 0: Complete ASTRA-X1 Heterogeneous RISC-V SoC Architecture (7-Stage RV32IMFX Core, L1 I$/D$, Wishbone B4 Crossbar, FP32, 4-Lane SIMD, 4x4 INT8 Systolic NPU, Autonomous DMA, Peripherals, and ASTRA-DAAQ Power-Aware Controller).",
+                caption_style
+            )
+        ]))
     mem_data = [
         ["Bus Entity", "Address Range", "ID (0x00)", "Architectural Description"],
         ["Instruction BRAM", "0x0000_0000 - 0x0000_3FFF", "—", "16 KB Dual-Mode Boot BRAM ($readmemh) + UART Bootloader + L1 I-Cache"],

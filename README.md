@@ -16,6 +16,8 @@
 
 **ASTRA-X1** is a complete, silicon-verified 32-bit heterogeneous RISC-V System-on-Chip designed for power-constrained edge-AI, signal processing, and autonomous control workloads.
 
+![ASTRA-X1 Complete System-on-Chip Architecture](docs/hardware_captures/astra_x1_system_architecture.jpg)
+
 ```mermaid
 flowchart TB
     subgraph DAAQ["ASTRA-DAAQ Runtime-Adaptive Power & Dependency Controller (Slave 4: 0x4000_2000)"]

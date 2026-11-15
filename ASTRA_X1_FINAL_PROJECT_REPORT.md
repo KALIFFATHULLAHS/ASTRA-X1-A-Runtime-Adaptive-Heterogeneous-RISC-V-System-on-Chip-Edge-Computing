@@ -25,6 +25,8 @@ Conventional homogeneous microcontrollers suffer from severe compute bottlenecks
 
 ## 2. System-on-Chip Architecture (`ASTRA-X1`)
 
+![ASTRA-X1 Complete System-on-Chip Architecture Diagram](C:/Users/skali/.gemini/antigravity/brain/5c286792-f9d5-49d3-9208-a1e454c10cff/astra_x1_system_architecture.jpg)
+
 ```mermaid
 flowchart TB
     subgraph DAAQ["ASTRA-DAAQ Runtime-Adaptive Power & Dependency Controller (Slave 4: 0x4000_2000)"]
